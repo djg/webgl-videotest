@@ -3,11 +3,15 @@
   <meta charset='utf-8'>
   <canvas id='c' width='600' height='600' style='border: 1px solid black'></canvas>
   <div id='d'></div>
+  <video id='v' src='gizmo.mp4' autoplay loop muted>
+      Your browser doesn't appear to support the <code>&lt;video&gt;</code> element.
+  </video>
   <script src='webgl-utils.js'></script>
   <script src='color-cube.js'></script>
   <script src='vector-math.js'></script>
   <script>
    'use strict';
+   var v = document.getElementById('v');
    var d = document.getElementById('d');
    var c = document.getElementById('c');
    var gl = c.getContext('webgl');
@@ -21,45 +25,50 @@
 
    var timeOffset = Date.now();
    var last = Date.now();
+   var dim = 16;
 
-   var query = location.search;
-   var dim = (query && query.match(/dim=([0-9]*)/)[1]) || 16;
-
+   var video_tex = gl.createTexture();
+   gl.bindTexture(gl.TEXTURE_2D, video_tex);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+   //   gl.pixelStorei(ext.UNPACK_REQUIRE_FASTPATH, true);
+   
    function draw() {
-     requestAnimationFrame(draw, c);
+       requestAnimationFrame(draw, c);
 
-     var now = Date.now();
-     var delta = now - last;
-     d.textContent = 'Draw: ' + dim*dim*dim + ', Delta: ' + delta;
-     last = now;
+       var now = Date.now();
+       var delta = now - last;
+       d.textContent = 'Delta: ' + delta;
+       last = now;
 
-     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+       // Update texture from video
+       gl.activeTexture(gl.TEXTURE0);
+       gl.bindTexture(gl.TEXTURE_2D, video_tex);
+       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
+       
+       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-// Uncomment the following for a bit of camera animation.
-//     camera.d[14] = 8 + Math.sin(z);
-     camera.d[14] = dim;
-     viewMatrix().makeInverseRigidBody(camera);
+       // Uncomment the following for a bit of camera animation.
+       //     camera.d[14] = 8 + Math.sin(z);
+       camera.d[14] = 1.5;
+       viewMatrix().makeInverseRigidBody(camera);
 
-     cube.bind();
-     cube.setUniforms(0x6);
+       cube.bind();
+       cube.setUniforms(0x6);
 
-     var time = (now - timeOffset) / 1000.0;
-     var step = 0.6;
-     var pos = [ -step*dim / 2.0, -step*dim / 2.0, -15 ];
-     for (var zz = 0; zz < dim; ++zz) {
-       for (var yy = 0; yy < dim; ++yy) {
-         for (var xx = 0; xx < dim; ++xx) {
-           modelMatrix().makeRotateXYZ(time + xx*0.21, time + yy*0.37, time + yy*0.13);
-           modelMatrix().d[12] = pos[0] + (xx + 0.5)*step;
-           modelMatrix().d[13] = pos[1] + (yy + 0.5)*step;
-           modelMatrix().d[14] = pos[2] + zz*step;
-           cube.draw(0x1);
-         }
-       }
-     }
-     z += 0.01;
+       var time = (now - timeOffset) / 1000.0;
+       var step = 0.6;
+       var pos = [ 0.0, 0.0, 0.0 ];
+       modelMatrix().makeRotateXYZ(time * 0.21, time * 0.37, time * 0.13);
+       modelMatrix().d[12] = pos[0];
+       modelMatrix().d[13] = pos[1];
+       modelMatrix().d[14] = pos[2];
+       cube.draw(0x1);
+       z += 0.01;
    }
 
    draw();
   </script>
+  
 </html>
